@@ -90,6 +90,12 @@ button {
   flex-shrink: 0;
 }
 
+@media all and (display-mode: standalone) {
+  .mobile-install-banner {
+    display: none;
+  }
+}
+
 .app-shell {
   min-height: 100vh;
   display: grid;

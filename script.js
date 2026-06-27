@@ -305,7 +305,8 @@ function renderHome(user, profile) {
   pageLogin.setAttribute('aria-hidden', 'true');
   pageHome.classList.add('active');
   pageHome.setAttribute('aria-hidden', 'false');
-  homeUsername.textContent = user.displayName || 'Andrea';
+  const displayName = profile?.displayName || user.displayName || user.email?.split('@')[0] || 'Andrea';
+  homeUsername.textContent = displayName;
   profileAvatar.style.backgroundImage = `url('${user.photoURL || 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=200&q=80'}')`;
   updateStats();
 }
@@ -367,6 +368,14 @@ function updateStats() {
 function showModal(show) {
   addConcertModal.classList.toggle('active', show);
   addConcertModal.setAttribute('aria-hidden', show ? 'false' : 'true');
+}
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/service-worker.js').catch((error) => {
+      console.warn('Service worker non registrato:', error);
+    });
+  });
 }
 
 initAuth().catch((error) => {

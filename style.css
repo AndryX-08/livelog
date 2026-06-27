@@ -294,7 +294,7 @@ button {
 }
 
 .field-group {
-  display: grid;
+  display: column;
   gap: 10px;
   position: relative;
 }
@@ -303,6 +303,7 @@ button {
 .field-group .field-label {
   color: var(--text-secondary);
   font-size: 0.95rem;
+  width: 100%;
 }
 
 .span-2 {
@@ -690,6 +691,12 @@ button {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
+}
+
+@media (max-width: 768px) {
+  .concert-form {
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+  }
 }
 
 .concert-form input,

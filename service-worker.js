@@ -1,4 +1,4 @@
-const CACHE_NAME = 'livelog-pwa-v2';
+const CACHE_NAME = 'livelog-pwa-v3';
 const APP_SHELL = [
   './',
   './index.html',

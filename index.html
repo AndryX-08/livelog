@@ -61,7 +61,7 @@
         </header>
 
         <div class="search-bar glass-card">
-          <input type="search" id="search-input" placeholder="Cerca artisti, città, festival" aria-label="Cerca artisti città festival" />
+          <input type="search" id="search-input" placeholder="Cerca concerti, artisti, città, festival" aria-label="Cerca concerti artisti città festival" />
         </div>
 
         <section class="stats-grid" aria-label="Statistiche LiveLog">
@@ -133,8 +133,12 @@
         </div>
         <form id="concert-form" class="concert-form">
           <div class="field-group span-2 autocomplete-field">
-            <label for="artist-name-input">Artista</label>
-            <input id="artist-name-input" type="text" name="artistName" required autocomplete="off" spellcheck="false" />
+            <label for="artist-name-input">Artisti</label>
+            <div class="chip-input-shell">
+              <div class="chip-list" id="artist-chip-list"></div>
+              <input id="artist-name-input" type="text" name="artistNameInput" autocomplete="off" spellcheck="false" placeholder="Scrivi un artista e premi invio" />
+            </div>
+            <input type="hidden" name="artistNames" id="artist-names-input" />
             <div class="autocomplete-panel" data-panel="artist" hidden></div>
           </div>
           <div class="field-group">
@@ -180,7 +184,10 @@
             <label for="notes-input">Note</label>
             <textarea id="notes-input" name="notes" rows="4"></textarea>
           </div>
-          <button class="btn btn-primary span-2" type="submit">Salva Concerto</button>
+          <div class="form-actions span-2">
+            <button class="btn btn-primary" type="submit" id="save-concert-button">Salva Concerto</button>
+            <button class="btn btn-ghost hidden" type="button" id="delete-concert-button">Elimina concerto</button>
+          </div>
         </form>
       </div>
     </div>

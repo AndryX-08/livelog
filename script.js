@@ -9,7 +9,7 @@ import {
   signInWithPopup,
   signInWithRedirect
 } from 'https://www.gstatic.com/firebasejs/10.10.0/firebase-auth.js';
-import { getFirestore, collection, doc, setDoc, serverTimestamp, getDoc, getDocs, query, where, addDoc } from 'https://www.gstatic.com/firebasejs/10.10.0/firebase-firestore.js';
+import { getFirestore, collection, doc, setDoc, serverTimestamp, getDoc, getDocs, query, where, addDoc, updateDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.10.0/firebase-firestore.js';
 
 const firebaseConfig = {
   apiKey: "AIzaSyBKoMnFeuo5iKjWaMz2p4l_YnV2xsxUl58",
@@ -133,16 +133,23 @@ function createRecentCard(concert) {
   const card = document.createElement('article');
   card.className = 'recent-card glass-card';
   const labels = getEventLabels(concert);
+  const artists = getConcertArtists(concert);
   card.innerHTML = `
     <div class="recent-card-header">
       <div>
-        <span>${concert.artistName}</span>
+        <span>${artists.join(', ') || concert.artistName}</span>
         <strong>${concert.venue} · ${concert.city}</strong>
       </div>
       <strong>${formatDate(concert.date)}</strong>
     </div>
     <p>${labels.join(' · ')}</p>
+    <div class="card-actions">
+      <button class="btn btn-ghost" type="button" data-action="edit">Modifica</button>
+      <button class="btn btn-ghost" type="button" data-action="delete">Elimina</button>
+    </div>
   `;
+  card.querySelector('[data-action="edit"]').addEventListener('click', () => openConcertForEdit(concert));
+  card.querySelector('[data-action="delete"]').addEventListener('click', () => removeConcert(concert));
   return card;
 }
 
@@ -150,17 +157,24 @@ function createTimelineCard(concert) {
   const card = document.createElement('article');
   card.className = 'timeline-card glass-card';
   const labels = getEventLabels(concert);
+  const artists = getConcertArtists(concert);
   card.innerHTML = `
     <div class="timeline-line"></div>
     <div class="timeline-content">
       <div>
-        <h4>${concert.artistName}</h4>
+        <h4>${artists.join(', ') || concert.artistName}</h4>
         <p>${formatDate(concert.date)} · ${concert.city}</p>
       </div>
       <span>${concert.venue}</span>
     </div>
     <p class="timeline-meta">${labels.join(' · ')}</p>
+    <div class="card-actions">
+      <button class="btn btn-ghost" type="button" data-action="edit">Modifica</button>
+      <button class="btn btn-ghost" type="button" data-action="delete">Elimina</button>
+    </div>
   `;
+  card.querySelector('[data-action="edit"]').addEventListener('click', () => openConcertForEdit(concert));
+  card.querySelector('[data-action="delete"]').addEventListener('click', () => removeConcert(concert));
   return card;
 }
 
@@ -217,6 +231,36 @@ function getEventLabels(concert) {
   }
 
   return labels.length > 0 ? labels : ['Concerto'];
+}
+
+function getConcertArtists(concert) {
+  if (Array.isArray(concert.artistNames) && concert.artistNames.length > 0) {
+    return concert.artistNames.filter(Boolean);
+  }
+
+  if (typeof concert.artistName === 'string' && concert.artistName.trim()) {
+    return concert.artistName
+      .split(',')
+      .map((artist) => artist.trim())
+      .filter(Boolean);
+  }
+
+  return [];
+}
+
+function getConcertSearchText(concert) {
+  return [
+    getConcertArtists(concert).join(' '),
+    concert.artistName,
+    concert.venue,
+    concert.city,
+    concert.country,
+    concert.festivalName,
+    concert.notes
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
 }
 
 function isStandaloneMode() {
@@ -330,6 +374,8 @@ function setupAutocomplete({ input, panel, fetchSuggestions, onSelect }) {
     window.setTimeout(closePanel, 120);
   });
 
+  closePanel();
+
   return {
     closePanel,
     refresh: runSearch
@@ -388,7 +434,8 @@ async function fetchLocationSuggestions(queryText, mode, signal) {
 }
 
 function applyArtistSuggestion(suggestion) {
-  artistInput.value = suggestion.value;
+  addArtistName(suggestion.value);
+  artistAutocomplete.closePanel();
 }
 
 function applyCitySuggestion(suggestion) {
@@ -408,6 +455,17 @@ function applyVenueSuggestion(suggestion) {
   }
 }
 
+function createChip(label, onRemove) {
+  const chip = document.createElement('span');
+  chip.className = 'chip';
+  chip.innerHTML = `
+    <span>${escapeHtml(label)}</span>
+    <button type="button" aria-label="Rimuovi ${escapeHtml(label)}">&times;</button>
+  `;
+  chip.querySelector('button').addEventListener('click', onRemove);
+  return chip;
+}
+
 const loginButton = document.getElementById('google-signin');
 const pageLogin = document.getElementById('page-login');
 const pageHome = document.getElementById('page-home');
@@ -421,13 +479,19 @@ const openAddConcertButton = document.getElementById('open-add-concert');
 const addConcertModal = document.getElementById('add-concert-modal');
 const closeAddConcertButton = document.getElementById('close-add-concert');
 const addConcertForm = document.getElementById('concert-form');
+const searchInput = document.getElementById('search-input');
 const artistInput = document.getElementById('artist-name-input');
+const artistChipList = document.getElementById('artist-chip-list');
+const artistNamesInput = document.getElementById('artist-names-input');
 const venueInput = document.getElementById('venue-input');
 const cityInput = document.getElementById('city-input');
 const countryInput = document.getElementById('country-input');
 const festivalToggle = document.getElementById('festival-toggle');
 const clubToggle = document.getElementById('club-toggle');
 const festivalField = document.getElementById('festival-name-field');
+const saveConcertButton = document.getElementById('save-concert-button');
+const deleteConcertButton = document.getElementById('delete-concert-button');
+const addConcertModalTitle = addConcertModal.querySelector('h3');
 const artistPanel = document.querySelector('[data-panel="artist"]');
 const venuePanel = document.querySelector('[data-panel="venue"]');
 const cityPanel = document.querySelector('[data-panel="city"]');
@@ -441,6 +505,9 @@ let currentUser = null;
 let loadedConcerts = [];
 let hasReloadedAfterUpdate = false;
 const MOBILE_BANNER_KEY = 'livelog-mobile-banner-dismissed';
+let currentEditConcertId = null;
+let currentArtistNames = [];
+let searchQuery = '';
 
 const artistAutocomplete = setupAutocomplete({
   input: artistInput,
@@ -463,9 +530,170 @@ const venueAutocomplete = setupAutocomplete({
   onSelect: applyVenueSuggestion
 });
 
+function syncArtistChips() {
+  artistChipList.innerHTML = '';
+  currentArtistNames.forEach((artistName, index) => {
+    artistChipList.appendChild(createChip(artistName, () => {
+      currentArtistNames = currentArtistNames.filter((entry, entryIndex) => entryIndex !== index);
+      syncArtistChips();
+      syncArtistHiddenField();
+    }));
+  });
+}
+
+function syncArtistHiddenField() {
+  artistNamesInput.value = JSON.stringify(currentArtistNames);
+}
+
+function addArtistName(artistName) {
+  const normalized = artistName.trim();
+  if (!normalized) return;
+
+  const exists = currentArtistNames.some((entry) => entry.toLowerCase() === normalized.toLowerCase());
+  if (exists) {
+    artistInput.value = '';
+    return;
+  }
+
+  currentArtistNames = [...currentArtistNames, normalized];
+  syncArtistChips();
+  syncArtistHiddenField();
+  artistInput.value = '';
+}
+
+function setArtistNames(artistNames = []) {
+  currentArtistNames = artistNames.map((artistName) => String(artistName).trim()).filter(Boolean);
+  syncArtistChips();
+  syncArtistHiddenField();
+}
+
+function resetConcertFormState() {
+  addConcertForm.reset();
+  setArtistNames([]);
+  currentEditConcertId = null;
+  festivalField.classList.add('hidden');
+  festivalToggle.checked = false;
+  clubToggle.checked = false;
+  saveConcertButton.textContent = 'Salva Concerto';
+  deleteConcertButton.classList.add('hidden');
+  addConcertModalTitle.textContent = 'Aggiungi un live nella tua collezione';
+  artistAutocomplete.closePanel();
+  cityAutocomplete.closePanel();
+  venueAutocomplete.closePanel();
+}
+
+function openNewConcertModal() {
+  resetConcertFormState();
+  showModal(true);
+}
+
+function openConcertForEdit(concert) {
+  resetConcertFormState();
+  currentEditConcertId = concert.id;
+  addConcertModalTitle.textContent = 'Modifica concerto';
+  saveConcertButton.textContent = 'Salva modifiche';
+  deleteConcertButton.classList.remove('hidden');
+  showModal(true);
+
+  const artists = getConcertArtists(concert);
+  setArtistNames(artists);
+  artistInput.value = '';
+  venueInput.value = concert.venue || '';
+  cityInput.value = concert.city || '';
+  countryInput.value = concert.country || '';
+  document.getElementById('date-input').value = concert.date || '';
+  document.getElementById('festival-name-input').value = concert.festivalName || '';
+  document.getElementById('rating-input').value = concert.rating || 5;
+  document.getElementById('notes-input').value = concert.notes || '';
+  festivalToggle.checked = Boolean(concert.festival);
+  clubToggle.checked = Boolean(concert.discoteca);
+  festivalField.classList.toggle('hidden', !concert.festival);
+}
+
+async function removeConcert(concert) {
+  const confirmed = window.confirm(`Vuoi eliminare il concerto "${getConcertArtists(concert).join(', ') || concert.artistName}"?`);
+  if (!confirmed) return false;
+
+  try {
+    await deleteDoc(doc(db, 'concerts', concert.id));
+    await loadConcerts();
+    return true;
+  } catch (error) {
+    console.error('Errore eliminando il concerto:', error);
+    alert('Non sono riuscito a eliminare il concerto.');
+    return false;
+  }
+}
+
+async function saveConcertFromForm(event) {
+  event.preventDefault();
+  if (!currentUser) return;
+
+  if (artistInput.value.trim()) {
+    addArtistName(artistInput.value);
+  }
+
+  const formData = new FormData(addConcertForm);
+  const artistNames = currentArtistNames.length > 0
+    ? currentArtistNames
+    : JSON.parse(formData.get('artistNames') || '[]');
+  if (artistNames.length === 0) {
+    alert('Aggiungi almeno un artista.');
+    return;
+  }
+  const artistNameJoined = artistNames.join(', ');
+  const artistIds = await Promise.all(artistNames.map((artistName) => getOrCreateArtist(artistName, currentUser.uid)));
+  const concertData = {
+    artistNames,
+    artistName: artistNameJoined,
+    date: formData.get('date'),
+    venue: formData.get('venue').trim(),
+    city: formData.get('city').trim(),
+    country: formData.get('country').trim(),
+    festival: formData.get('festival') === 'on',
+    discoteca: formData.get('discoteca') === 'on',
+    festivalName: formData.get('festivalName').trim() || null,
+    rating: Number(formData.get('rating')),
+    notes: formData.get('notes').trim() || null,
+    userId: currentUser.uid,
+    updatedAt: new Date().toISOString(),
+    artistId: artistIds[0] || null,
+    artistIds
+  };
+
+  const venueId = await getOrCreateVenue(concertData.venue, concertData.city, concertData.country, currentUser.uid);
+
+  try {
+    if (currentEditConcertId) {
+      await updateDoc(doc(db, 'concerts', currentEditConcertId), {
+        ...concertData,
+        artistIds,
+        venueId
+      });
+    } else {
+      await addConcert({
+        ...concertData,
+        artistIds,
+        venueId,
+        createdAt: new Date().toISOString()
+      });
+    }
+
+    await loadConcerts();
+    showModal(false);
+    resetConcertFormState();
+  } catch (saveError) {
+    console.error('Errore salvando il concerto:', saveError);
+    alert('Non sono riuscito a salvare il concerto.');
+  }
+}
+
 function renderLoggedOutState() {
   currentUser = null;
   loadedConcerts = [];
+  searchQuery = '';
+  searchInput.value = '';
+  resetConcertFormState();
 
   pageHome.classList.remove('active');
   pageHome.setAttribute('aria-hidden', 'true');
@@ -523,46 +751,51 @@ onAuthStateChange(async (user) => {
   }
 });
 
-openAddConcertButton.addEventListener('click', () => showModal(true));
-closeAddConcertButton.addEventListener('click', () => showModal(false));
+searchInput.addEventListener('input', () => {
+  searchQuery = searchInput.value || '';
+  renderConcertData();
+});
+
+artistInput.addEventListener('keydown', (event) => {
+  if (event.key === 'Enter' || event.key === ',') {
+    event.preventDefault();
+    addArtistName(artistInput.value);
+  }
+});
+
+artistInput.addEventListener('blur', () => {
+  if (artistInput.value.trim()) {
+    addArtistName(artistInput.value);
+  }
+});
+
+openAddConcertButton.addEventListener('click', openNewConcertModal);
+closeAddConcertButton.addEventListener('click', () => {
+  showModal(false);
+  resetConcertFormState();
+});
 addConcertModal.addEventListener('click', (event) => {
-  if (event.target === addConcertModal) showModal(false);
+  if (event.target === addConcertModal) {
+    showModal(false);
+    resetConcertFormState();
+  }
 });
 festivalToggle.addEventListener('change', () => {
   festivalField.classList.toggle('hidden', !festivalToggle.checked);
 });
-
-addConcertForm.addEventListener('submit', async (event) => {
-  event.preventDefault();
-  if (!currentUser) return;
-
-  const formData = new FormData(addConcertForm);
-  const concertData = {
-    artistName: formData.get('artistName').trim(),
-    date: formData.get('date'),
-    venue: formData.get('venue').trim(),
-    city: formData.get('city').trim(),
-    country: formData.get('country').trim(),
-    festival: formData.get('festival') === 'on',
-    discoteca: formData.get('discoteca') === 'on',
-    festivalName: formData.get('festivalName').trim() || null,
-    rating: Number(formData.get('rating')),
-    notes: formData.get('notes').trim() || null,
-    userId: currentUser.uid,
-    createdAt: new Date().toISOString()
-  };
-
-  const artistId = await getOrCreateArtist(concertData.artistName, currentUser.uid);
-  const venueId = await getOrCreateVenue(concertData.venue, concertData.city, concertData.country, currentUser.uid);
-
-  await addConcert({ ...concertData, artistId, venueId });
-  await loadConcerts();
-  showModal(false);
-  addConcertForm.reset();
-  festivalField.classList.add('hidden');
-  festivalToggle.checked = false;
-  clubToggle.checked = false;
+deleteConcertButton.addEventListener('click', async () => {
+  if (!currentEditConcertId) return;
+  const concert = loadedConcerts.find((entry) => entry.id === currentEditConcertId);
+  if (concert) {
+    const deleted = await removeConcert(concert);
+    if (deleted) {
+      showModal(false);
+      resetConcertFormState();
+    }
+  }
 });
+
+addConcertForm.addEventListener('submit', saveConcertFromForm);
 
 async function loadConcerts() {
   if (!currentUser) return;
@@ -582,42 +815,64 @@ function renderHome(user, profile) {
 }
 
 function renderConcertData() {
-  renderRecentConcerts();
-  renderTimeline();
-  renderTopArtists();
+  const visibleConcerts = getVisibleConcerts();
+  renderRecentConcerts(visibleConcerts);
+  renderTimeline(visibleConcerts);
+  renderTopArtists(visibleConcerts);
   updateStats();
 }
 
-function renderRecentConcerts() {
+function getVisibleConcerts() {
+  const normalizedQuery = searchQuery.trim().toLowerCase();
+  if (!normalizedQuery) return loadedConcerts;
+
+  return loadedConcerts.filter((concert) => getConcertSearchText(concert).includes(normalizedQuery));
+}
+
+function renderRecentConcerts(concerts = []) {
   recentConcertsContainer.innerHTML = '';
   if (loadedConcerts.length === 0) {
     recentConcertsContainer.innerHTML = `<div class="placeholder-card glass-card"><span>Nessun concerto ancora. Aggiungi il tuo primo evento!</span></div>`;
     return;
   }
-  loadedConcerts.slice(0, 3).forEach((concert) => {
+  if (concerts.length === 0) {
+    recentConcertsContainer.innerHTML = `<div class="placeholder-card glass-card"><span>Nessun concerto corrisponde alla ricerca.</span></div>`;
+    return;
+  }
+  concerts.slice(0, 3).forEach((concert) => {
     recentConcertsContainer.appendChild(createRecentCard(concert));
   });
 }
 
-function renderTimeline() {
+function renderTimeline(concerts = []) {
   timelineList.innerHTML = '';
   if (loadedConcerts.length === 0) {
     timelineList.innerHTML = `<div class="placeholder-card glass-card"><span>Salva un concerto per vedere la timeline.</span></div>`;
     return;
   }
-  loadedConcerts.forEach((concert) => {
+  if (concerts.length === 0) {
+    timelineList.innerHTML = `<div class="placeholder-card glass-card"><span>Nessun risultato per la ricerca.</span></div>`;
+    return;
+  }
+  concerts.forEach((concert) => {
     timelineList.appendChild(createTimelineCard(concert));
   });
 }
 
-function renderTopArtists() {
+function renderTopArtists(concerts = []) {
   topArtistsContainer.innerHTML = '';
   if (loadedConcerts.length === 0) {
     topArtistsContainer.innerHTML = `<div class="placeholder-card glass-card"><span>Il tuo primo artista apparirà qui.</span></div>`;
     return;
   }
-  const tally = loadedConcerts.reduce((acc, concert) => {
-    acc[concert.artistName] = (acc[concert.artistName] || 0) + 1;
+  if (concerts.length === 0) {
+    topArtistsContainer.innerHTML = `<div class="placeholder-card glass-card"><span>Nessun artista coincide con la ricerca.</span></div>`;
+    return;
+  }
+  const tally = concerts.reduce((acc, concert) => {
+    getConcertArtists(concert).forEach((artistName) => {
+      acc[artistName] = (acc[artistName] || 0) + 1;
+    });
     return acc;
   }, {});
   Object.entries(tally)
@@ -628,11 +883,11 @@ function renderTopArtists() {
     });
 }
 
-function updateStats() {
-  statConcerts.textContent = String(loadedConcerts.length);
-  statArtists.textContent = String(new Set(loadedConcerts.map((concert) => concert.artistName)).size);
-  statFestivals.textContent = String(loadedConcerts.filter((concert) => concert.festival).length);
-  statYears.textContent = String(new Set(loadedConcerts.map((concert) => new Date(concert.date).getFullYear())).size);
+function updateStats(concerts = loadedConcerts) {
+  statConcerts.textContent = String(concerts.length);
+  statArtists.textContent = String(new Set(concerts.flatMap((concert) => getConcertArtists(concert))).size);
+  statFestivals.textContent = String(concerts.filter((concert) => concert.festival).length);
+  statYears.textContent = String(new Set(concerts.map((concert) => new Date(concert.date).getFullYear())).size);
 }
 
 function showModal(show) {

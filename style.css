@@ -261,6 +261,58 @@ button {
   position: relative;
 }
 
+.chip-input-shell {
+  display: grid;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.06);
+  transition: border-color 0.24s ease, transform 0.24s ease;
+}
+
+.chip-input-shell:focus-within {
+  border-color: rgba(109, 91, 255, 0.75);
+  transform: translateY(-1px);
+}
+
+.chip-input-shell input {
+  border: none;
+  background: transparent;
+  padding: 0;
+  border-radius: 0;
+}
+
+.chip-input-shell input:focus {
+  transform: none;
+}
+
+.chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 999px;
+  padding: 8px 12px;
+  background: rgba(109, 91, 255, 0.18);
+  border: 1px solid rgba(109, 91, 255, 0.35);
+  color: var(--text);
+  font-size: 0.92rem;
+}
+
+.chip button {
+  width: auto;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  box-shadow: none;
+}
+
 .autocomplete-panel {
   position: absolute;
   left: 0;
@@ -277,6 +329,10 @@ button {
   backdrop-filter: blur(18px);
   max-height: 280px;
   overflow: auto;
+}
+
+.autocomplete-panel[hidden] {
+  display: none !important;
 }
 
 .autocomplete-item {
@@ -318,6 +374,31 @@ button {
 
 .timeline-content > div {
   min-width: 0;
+}
+
+.card-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+  flex-wrap: wrap;
+}
+
+.card-actions .btn {
+  width: auto;
+  padding: 10px 14px;
+  border-radius: 18px;
+}
+
+.form-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.form-actions .btn {
+  width: auto;
 }
 
 .pill-group {
@@ -460,6 +541,14 @@ button {
   .modal-header {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .form-actions {
+    align-items: stretch;
+  }
+
+  .form-actions .btn {
+    width: 100%;
   }
 }
 

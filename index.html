@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LiveLog</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <main class="page page-login active" id="page-login">
+      <div class="login-card glass-card">
+        <div class="brand-block">
+          <div class="brand-mark">L</div>
+          <div>
+            <h1>LiveLog</h1>
+            <p>Registra i tuoi concerti, segui gli artisti e scopri la tua timeline live.</p>
+          </div>
+        </div>
+        <button class="btn btn-primary" id="google-signin">
+          Continua con Google
+        </button>
+        <p class="login-hint">Accesso rapido con Firebase Authentication.</p>
+      </div>
+    </main>
+
+    <main class="page page-home" id="page-home" aria-hidden="true">
+      <section class="home-shell glass-card">
+        <header class="home-header">
+          <div class="home-profile">
+            <div class="avatar-ring" id="profile-avatar"></div>
+            <div>
+              <p class="eyebrow">Ciao</p>
+              <h2 id="home-username">Andrea</h2>
+            </div>
+          </div>
+          <button class="btn btn-primary btn-add" id="open-add-concert">
+            Aggiungi Concerto
+          </button>
+        </header>
+
+        <div class="search-bar glass-card">
+          <input type="search" id="search-input" placeholder="Cerca artisti, città, festival" aria-label="Cerca artisti città festival" />
+        </div>
+
+        <section class="stats-grid" aria-label="Statistiche LiveLog">
+          <div class="stat-card glass-card">
+            <span>Concerti</span>
+            <strong id="stat-concerts">0</strong>
+          </div>
+          <div class="stat-card glass-card">
+            <span>Artisti</span>
+            <strong id="stat-artists">0</strong>
+          </div>
+          <div class="stat-card glass-card">
+            <span>Festival</span>
+            <strong id="stat-festivals">0</strong>
+          </div>
+          <div class="stat-card glass-card">
+            <span>Anni</span>
+            <strong id="stat-years">0</strong>
+          </div>
+        </section>
+
+        <section class="section-block">
+          <div class="section-heading">
+            <h3>Concerti recenti</h3>
+            <span>Gli ultimi momenti live salvati</span>
+          </div>
+          <div class="recent-list" id="recent-concerts">
+            <div class="placeholder-card glass-card">
+              <span>Nessun concerto ancora. Aggiungi il tuo primo evento!</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="section-block">
+          <div class="section-heading">
+            <h3>Timeline</h3>
+            <span>Ordine cronologico dei tuoi live.</span>
+          </div>
+          <div class="timeline-list" id="timeline-list">
+            <div class="placeholder-card glass-card">
+              <span>Salva un concerto per vedere la timeline.</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="section-block">
+          <div class="section-heading">
+            <h3>Artisti più visti</h3>
+            <span>Le star che hai seguito dal vivo.</span>
+          </div>
+          <div class="top-artists-list" id="top-artists">
+            <div class="placeholder-card glass-card">
+              <span>Il tuo primo artista apparirà qui.</span>
+            </div>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <div class="modal-shell" id="add-concert-modal" aria-hidden="true">
+      <div class="modal-backdrop"></div>
+      <div class="modal-content glass-card">
+        <div class="modal-header">
+          <div>
+            <p class="eyebrow">Nuovo Concerto</p>
+            <h3>Aggiungi un live nella tua collezione</h3>
+          </div>
+          <button class="btn btn-ghost" id="close-add-concert">Chiudi</button>
+        </div>
+        <form id="concert-form" class="concert-form">
+          <label>
+            Artista
+            <input type="text" name="artistName" required />
+          </label>
+          <label>
+            Data
+            <input type="date" name="date" required />
+          </label>
+          <label>
+            Luogo
+            <input type="text" name="venue" required />
+          </label>
+          <label>
+            Città
+            <input type="text" name="city" required />
+          </label>
+          <label>
+            Nazione
+            <input type="text" name="country" required />
+          </label>
+          <label class="toggle-row">
+            Festival
+            <input type="checkbox" id="festival-toggle" name="festival" />
+          </label>
+          <label id="festival-name-field" class="hidden">
+            Nome Festival
+            <input type="text" name="festivalName" />
+          </label>
+          <label>
+            Voto da 1 a 5
+            <input type="number" name="rating" min="1" max="5" value="5" required />
+          </label>
+          <label>
+            Note
+            <textarea name="notes" rows="4"></textarea>
+          </label>
+          <button class="btn btn-primary" type="submit">Salva Concerto</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="script.js"></script>
+</body>
+</html>

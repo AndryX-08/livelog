@@ -1,6 +1,6 @@
 {
   "firestore": {
-    "rules": "'/Users/andrea/Desktop/Andrea/Siti/LiveLog/firestore.rules'",
-    "indexes": "'/Users/andrea/Desktop/Andrea/Siti/LiveLog/firestore.indexes.json'"
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
   }
 }

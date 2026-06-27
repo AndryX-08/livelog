@@ -9,7 +9,7 @@ import {
   signInWithPopup,
   signInWithRedirect
 } from 'https://www.gstatic.com/firebasejs/10.10.0/firebase-auth.js';
-import { getFirestore, collection, doc, setDoc, serverTimestamp, getDoc, getDocs, query, where, orderBy, addDoc } from 'https://www.gstatic.com/firebasejs/10.10.0/firebase-firestore.js';
+import { getFirestore, collection, doc, setDoc, serverTimestamp, getDoc, getDocs, query, where, addDoc } from 'https://www.gstatic.com/firebasejs/10.10.0/firebase-firestore.js';
 
 const firebaseConfig = {
   apiKey: "AIzaSyBKoMnFeuo5iKjWaMz2p4l_YnV2xsxUl58",
@@ -85,18 +85,20 @@ async function addConcert(concertData) {
 }
 
 async function getUserConcerts(uid) {
-  const concertsQuery = query(collection(db, 'concerts'), where('userId', '==', uid), orderBy('date', 'desc'));
+  const concertsQuery = query(collection(db, 'concerts'), where('userId', '==', uid));
   const snapshot = await getDocs(concertsQuery);
-  return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+  return snapshot.docs
+    .map((doc) => ({ id: doc.id, ...doc.data() }))
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 }
 
 async function getOrCreateArtist(artistName, userId) {
   if (!artistName) return null;
   const artistsRef = collection(db, 'artists');
-  const artistQuery = query(artistsRef, where('userId', '==', userId), where('name', '==', artistName));
-  const snapshot = await getDocs(artistQuery);
-  if (!snapshot.empty) {
-    return snapshot.docs[0].id;
+  const snapshot = await getDocs(query(artistsRef, where('userId', '==', userId)));
+  const existingArtist = snapshot.docs.find((entry) => entry.data().name === artistName);
+  if (existingArtist) {
+    return existingArtist.id;
   }
   const docRef = await addDoc(artistsRef, {
     name: artistName,
@@ -109,16 +111,13 @@ async function getOrCreateArtist(artistName, userId) {
 async function getOrCreateVenue(venueName, city, country, userId) {
   if (!venueName || !city || !country) return null;
   const venuesRef = collection(db, 'venues');
-  const venueQuery = query(
-    venuesRef,
-    where('userId', '==', userId),
-    where('name', '==', venueName),
-    where('city', '==', city),
-    where('country', '==', country)
-  );
-  const snapshot = await getDocs(venueQuery);
-  if (!snapshot.empty) {
-    return snapshot.docs[0].id;
+  const snapshot = await getDocs(query(venuesRef, where('userId', '==', userId)));
+  const existingVenue = snapshot.docs.find((entry) => {
+    const data = entry.data();
+    return data.name === venueName && data.city === city && data.country === country;
+  });
+  if (existingVenue) {
+    return existingVenue.id;
   }
   const docRef = await addDoc(venuesRef, {
     name: venueName,

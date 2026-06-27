@@ -1,0 +1,31 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "concerts",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userId", "order": "ASC" },
+        { "fieldPath": "date", "order": "DESC" }
+      ]
+    },
+    {
+      "collectionGroup": "artists",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userId", "order": "ASC" },
+        { "fieldPath": "name", "order": "ASC" }
+      ]
+    },
+    {
+      "collectionGroup": "venues",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userId", "order": "ASC" },
+        { "fieldPath": "name", "order": "ASC" },
+        { "fieldPath": "city", "order": "ASC" },
+        { "fieldPath": "country", "order": "ASC" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

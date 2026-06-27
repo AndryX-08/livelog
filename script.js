@@ -219,6 +219,35 @@ function getEventLabels(concert) {
   return labels.length > 0 ? labels : ['Concerto'];
 }
 
+function isStandaloneMode() {
+  return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+}
+
+function isMobileDevice() {
+  return window.matchMedia('(max-width: 640px)').matches;
+}
+
+function showMobileInstallBanner() {
+  if (!mobileInstallBanner) return;
+  if (!isMobileDevice() || isStandaloneMode()) return;
+  try {
+    if (window.localStorage.getItem(MOBILE_BANNER_KEY) === '1') return;
+  } catch (error) {
+    console.warn('Impossibile leggere lo stato del banner:', error);
+  }
+  mobileInstallBanner.hidden = false;
+}
+
+function hideMobileInstallBanner() {
+  if (!mobileInstallBanner) return;
+  mobileInstallBanner.hidden = true;
+  try {
+    window.localStorage.setItem(MOBILE_BANNER_KEY, '1');
+  } catch (error) {
+    console.warn('Impossibile salvare lo stato del banner:', error);
+  }
+}
+
 function setupAutocomplete({ input, panel, fetchSuggestions, onSelect }) {
   let debounceTimer = null;
   let controller = null;
@@ -402,12 +431,16 @@ const festivalField = document.getElementById('festival-name-field');
 const artistPanel = document.querySelector('[data-panel="artist"]');
 const venuePanel = document.querySelector('[data-panel="venue"]');
 const cityPanel = document.querySelector('[data-panel="city"]');
+const mobileInstallBanner = document.getElementById('mobile-install-banner');
+const mobileInstallBannerClose = document.getElementById('mobile-install-banner-close');
 const recentConcertsContainer = document.getElementById('recent-concerts');
 const timelineList = document.getElementById('timeline-list');
 const topArtistsContainer = document.getElementById('top-artists');
 
 let currentUser = null;
 let loadedConcerts = [];
+let hasReloadedAfterUpdate = false;
+const MOBILE_BANNER_KEY = 'livelog-mobile-banner-dismissed';
 
 const artistAutocomplete = setupAutocomplete({
   input: artistInput,
@@ -453,6 +486,10 @@ async function initAuth() {
     console.error('Errore completando il login redirect:', error);
     alert('Il login Google non è riuscito a completarsi. Riprova.');
   }
+}
+
+if (mobileInstallBannerClose) {
+  mobileInstallBannerClose.addEventListener('click', hideMobileInstallBanner);
 }
 
 loginButton.addEventListener('click', async () => {
@@ -612,11 +649,40 @@ function showModal(show) {
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('service-worker.js', { updateViaCache: 'none' }).catch((error) => {
+    navigator.serviceWorker.register('service-worker.js', { updateViaCache: 'none' }).then((registration) => {
+      registration.update();
+
+      registration.addEventListener('updatefound', () => {
+        const installingWorker = registration.installing;
+        if (!installingWorker) return;
+
+        installingWorker.addEventListener('statechange', () => {
+          if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
+            registration.waiting?.postMessage({ type: 'SKIP_WAITING' });
+          }
+        });
+      });
+    }).catch((error) => {
       console.warn('Service worker non registrato:', error);
     });
   });
+
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (hasReloadedAfterUpdate) return;
+    hasReloadedAfterUpdate = true;
+    window.location.reload();
+  });
 }
+
+window.addEventListener('load', () => {
+  showMobileInstallBanner();
+});
+
+window.addEventListener('resize', () => {
+  if (mobileInstallBanner && !mobileInstallBanner.hidden && (!isMobileDevice() || isStandaloneMode())) {
+    hideMobileInstallBanner();
+  }
+});
 
 initAuth().catch((error) => {
   console.error('Errore inizializzando l\'auth:', error);

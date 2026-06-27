@@ -40,12 +40,62 @@ button {
   font: inherit;
 }
 
+.mobile-install-banner {
+  position: fixed;
+  inset: 12px 12px auto 12px;
+  z-index: 40;
+  pointer-events: none;
+}
+
+.mobile-install-banner__content {
+  max-width: 760px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+  pointer-events: auto;
+  border-radius: 28px;
+  padding: 20px 22px;
+  border-color: rgba(109, 91, 255, 0.28);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.42);
+}
+
+.mobile-install-banner__copy {
+  display: grid;
+  gap: 8px;
+}
+
+.mobile-install-banner__copy h2 {
+  margin: 0;
+  font-size: 1.1rem;
+  line-height: 1.1;
+}
+
+.mobile-install-banner__copy ol {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--text-secondary);
+  display: grid;
+  gap: 6px;
+}
+
+.mobile-install-banner__copy li {
+  line-height: 1.35;
+}
+
+.mobile-install-banner__close {
+  width: auto;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
 .app-shell {
   min-height: 100vh;
   display: grid;
   justify-items: center;
   align-items: start;
-  padding: 32px 24px 48px;
+  padding: 32px 24px 56px;
 }
 
 .page {
@@ -72,7 +122,7 @@ button {
 
 .home-shell {
   display: grid;
-  gap: 28px;
+  gap: 24px;
 }
 
 .home-header {
@@ -340,20 +390,35 @@ button {
 }
 
 @media (max-width: 640px) {
+  .mobile-install-banner {
+    display: block;
+  }
+
+  .mobile-install-banner__content {
+    flex-direction: column;
+    border-radius: 24px;
+  }
+
+  .mobile-install-banner__close {
+    width: 100%;
+  }
+
   .app-shell {
-    padding: 18px;
+    padding: 96px 14px 20px;
   }
 
   .home-header {
     width: 100%;
+    gap: 14px;
   }
 
   .stats-grid {
     grid-template-columns: 1fr;
+    gap: 12px;
   }
 
   .glass-card {
-    padding: 22px;
+    padding: 20px;
   }
 
   .autocomplete-panel {
@@ -363,6 +428,38 @@ button {
   .pill-toggle span {
     min-width: 0;
     width: 100%;
+  }
+
+  .page {
+    transform: translateY(16px);
+  }
+
+  .home-shell {
+    gap: 18px;
+  }
+
+  .section-heading {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .section-heading span {
+    line-height: 1.35;
+  }
+
+  .modal-shell {
+    padding: 12px;
+  }
+
+  .modal-content {
+    max-height: calc(100dvh - 24px);
+    padding: 20px;
+    border-radius: 24px;
+  }
+
+  .modal-header {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }
 

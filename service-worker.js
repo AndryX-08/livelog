@@ -1,10 +1,10 @@
 const CACHE_NAME = 'livelog-pwa-v1';
 const ASSETS_TO_CACHE = [
-  '/',
-  '/index.html',
-  '/style.css',
-  '/script.js',
-  '/manifest.json'
+  './',
+  './index.html',
+  './style.css',
+  './script.js',
+  './manifest.json'
 ];
 
 self.addEventListener('install', (event) => {

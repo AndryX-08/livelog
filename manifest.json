@@ -2,8 +2,8 @@
   "name": "LiveLog",
   "short_name": "LiveLog",
   "description": "Registra i tuoi concerti dal vivo e scopri la tua timeline personale.",
-  "start_url": "/",
-  "scope": "/",
+  "start_url": ".",
+  "scope": ".",
   "display": "standalone",
   "background_color": "#09090B",
   "theme_color": "#09090B"

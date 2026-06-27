@@ -11,26 +11,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css"/>
 </head>
 <body>
-  <div class="mobile-install-banner" id="mobile-install-banner" hidden>
-    <div class="mobile-install-banner__content glass-card">
-      <div class="mobile-install-banner__copy">
-        <p class="eyebrow">Installa LiveLog</p>
-        <h2>Aggiungilo alla schermata home</h2>
-        <ol>
-          <li>Apri il menu di condivisione del browser.</li>
-          <li>Tocca <strong>Aggiungi a Home</strong> o <strong>Installa app</strong>.</li>
-          <li>Conferma: l'icona apparirà tra le tue app.</li>
-        </ol>
-      </div>
-      <button class="btn btn-ghost mobile-install-banner__close" id="mobile-install-banner-close" type="button">
-        Fatto
-      </button>
-    </div>
-  </div>
-
   <div class="app-shell">
     <main class="page page-login active" id="page-login">
       <div class="login-card glass-card">
@@ -47,6 +30,23 @@
         <p class="login-hint">Accedi per iniziare a salvare tutti i tuoi live!</p>
       </div>
     </main>
+
+    <div class="mobile-install-banner" id="mobile-install-banner" hidden>
+    <div class="mobile-install-banner__content glass-card">
+      <div class="mobile-install-banner__copy">
+        <p class="eyebrow">Installa LiveLog</p>
+        <h2>Aggiungilo alla schermata home</h2>
+        <ol>
+          <li>Apri il menu di condivisione del browser.</li>
+          <li>Tocca <strong>Aggiungi a Home</strong> o <strong>Installa app</strong>.</li>
+          <li>Conferma: l'icona apparirà tra le tue app.</li>
+        </ol>
+      </div>
+      <button class="btn btn-ghost mobile-install-banner__close" id="mobile-install-banner-close" type="button">
+        Fatto
+      </button>
+    </div>
+  </div>
 
     <main class="page page-home" id="page-home" aria-hidden="true">
       <div class="home-page-shell">
@@ -139,8 +139,8 @@
       <div class="modal-content glass-card">
         <div class="modal-header">
           <div>
-            <p class="eyebrow">Nuovo Concerto</p>
-            <h3>Aggiungi un live nella tua collezione</h3>
+            <h3 class="eyebrow">Nuovo Concerto</h3>
+            <p>Aggiungi un live nella tua collezione</p>
           </div>
         </div>
         <form id="concert-form" class="concert-form">
@@ -198,8 +198,8 @@
           </div>
           <div class="form-actions span-2">
             <button class="btn btn-primary" type="submit" id="save-concert-button">Salva Concerto</button>
-            <button class="btn btn-ghost" type="button" id="close-add-concert">Chiudi</button>
-            <button class="btn btn-danger hidden" type="button" id="delete-concert-button">Elimina concerto</button>
+            <button class="btn btn-ghost" id="close-add-concert">Chiudi</button>
+            <button class="btn btn-ghost hidden" type="button" id="delete-concert-button">Elimina concerto</button>
           </div>
         </form>
       </div>

@@ -115,43 +115,55 @@
           <button class="btn btn-ghost" id="close-add-concert">Chiudi</button>
         </div>
         <form id="concert-form" class="concert-form">
-          <label>
-            Artista
-            <input type="text" name="artistName" required />
-          </label>
-          <label>
-            Data
-            <input type="date" name="date" required />
-          </label>
-          <label>
-            Luogo
-            <input type="text" name="venue" required />
-          </label>
-          <label>
-            Città
-            <input type="text" name="city" required />
-          </label>
-          <label>
-            Nazione
-            <input type="text" name="country" required />
-          </label>
-          <label class="toggle-row">
-            Festival
-            <input type="checkbox" id="festival-toggle" name="festival" />
-          </label>
-          <label id="festival-name-field" class="hidden">
-            Nome Festival
-            <input type="text" name="festivalName" />
-          </label>
-          <label>
-            Voto da 1 a 5
-            <input type="number" name="rating" min="1" max="5" value="5" required />
-          </label>
-          <label>
-            Note
-            <textarea name="notes" rows="4"></textarea>
-          </label>
-          <button class="btn btn-primary" type="submit">Salva Concerto</button>
+          <div class="field-group span-2 autocomplete-field">
+            <label for="artist-name-input">Artista</label>
+            <input id="artist-name-input" type="text" name="artistName" required autocomplete="off" spellcheck="false" />
+            <div class="autocomplete-panel" data-panel="artist" hidden></div>
+          </div>
+          <div class="field-group">
+            <label for="date-input">Data</label>
+            <input id="date-input" type="date" name="date" required />
+          </div>
+          <div class="field-group span-2 autocomplete-field">
+            <label for="venue-input">Luogo</label>
+            <input id="venue-input" type="text" name="venue" required autocomplete="off" spellcheck="false" />
+            <div class="autocomplete-panel" data-panel="venue" hidden></div>
+          </div>
+          <div class="field-group autocomplete-field">
+            <label for="city-input">Città</label>
+            <input id="city-input" type="text" name="city" required autocomplete="off" spellcheck="false" />
+            <div class="autocomplete-panel" data-panel="city" hidden></div>
+          </div>
+          <div class="field-group">
+            <label for="country-input">Nazione</label>
+            <input id="country-input" type="text" name="country" required autocomplete="off" spellcheck="false" />
+          </div>
+          <div class="field-group span-2">
+            <span class="field-label">Tipo evento</span>
+            <div class="pill-group">
+              <label class="pill-toggle">
+                <input type="checkbox" id="festival-toggle" name="festival" />
+                <span>Festival</span>
+              </label>
+              <label class="pill-toggle">
+                <input type="checkbox" id="club-toggle" name="discoteca" />
+                <span>Discoteca</span>
+              </label>
+            </div>
+          </div>
+          <div id="festival-name-field" class="field-group span-2 hidden">
+            <label for="festival-name-input">Nome Festival</label>
+            <input id="festival-name-input" type="text" name="festivalName" autocomplete="off" />
+          </div>
+          <div class="field-group">
+            <label for="rating-input">Voto da 1 a 5</label>
+            <input id="rating-input" type="number" name="rating" min="1" max="5" value="5" required />
+          </div>
+          <div class="field-group span-2">
+            <label for="notes-input">Note</label>
+            <textarea id="notes-input" name="notes" rows="4"></textarea>
+          </div>
+          <button class="btn btn-primary span-2" type="submit">Salva Concerto</button>
         </form>
       </div>
     </div>

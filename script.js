@@ -132,6 +132,7 @@ async function getOrCreateVenue(venueName, city, country, userId) {
 function createRecentCard(concert) {
   const card = document.createElement('article');
   card.className = 'recent-card glass-card';
+  const labels = getEventLabels(concert);
   card.innerHTML = `
     <div class="recent-card-header">
       <div>
@@ -140,7 +141,7 @@ function createRecentCard(concert) {
       </div>
       <strong>${formatDate(concert.date)}</strong>
     </div>
-    <p>${concert.festival ? concert.festivalName || 'Festival live' : 'Concerto normale'}</p>
+    <p>${labels.join(' · ')}</p>
   `;
   return card;
 }
@@ -148,13 +149,17 @@ function createRecentCard(concert) {
 function createTimelineCard(concert) {
   const card = document.createElement('article');
   card.className = 'timeline-card glass-card';
+  const labels = getEventLabels(concert);
   card.innerHTML = `
     <div class="timeline-line"></div>
     <div class="timeline-content">
-      <h4>${concert.artistName}</h4>
-      <p>${formatDate(concert.date)} · ${concert.city}</p>
+      <div>
+        <h4>${concert.artistName}</h4>
+        <p>${formatDate(concert.date)} · ${concert.city}</p>
+      </div>
       <span>${concert.venue}</span>
     </div>
+    <p class="timeline-meta">${labels.join(' · ')}</p>
   `;
   return card;
 }
@@ -179,6 +184,201 @@ function formatDate(dateString) {
   });
 }
 
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
+function getCityFromAddress(address = {}) {
+  return address.city || address.town || address.village || address.municipality || address.county || address.state || '';
+}
+
+function getPlaceTitle(item, fallback = '') {
+  return item?.name || item?.display_name?.split(',')[0] || fallback;
+}
+
+function normalizeSuggestionKey(primary, secondary) {
+  return `${primary}::${secondary}`;
+}
+
+function getEventLabels(concert) {
+  const labels = [];
+
+  if (concert.festival) {
+    labels.push(concert.festivalName ? `Festival: ${concert.festivalName}` : 'Festival');
+  }
+
+  if (concert.discoteca) {
+    labels.push('Discoteca');
+  }
+
+  return labels.length > 0 ? labels : ['Concerto'];
+}
+
+function setupAutocomplete({ input, panel, fetchSuggestions, onSelect }) {
+  let debounceTimer = null;
+  let controller = null;
+
+  function closePanel() {
+    controller?.abort();
+    panel.innerHTML = '';
+    panel.hidden = true;
+    input.setAttribute('aria-expanded', 'false');
+  }
+
+  function renderPanel(suggestions) {
+    if (suggestions.length === 0) {
+      closePanel();
+      return;
+    }
+
+    panel.innerHTML = '';
+    suggestions.forEach((suggestion) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'autocomplete-item';
+      button.innerHTML = `
+        <strong>${escapeHtml(suggestion.primary)}</strong>
+        ${suggestion.secondary ? `<span>${escapeHtml(suggestion.secondary)}</span>` : ''}
+      `;
+      button.addEventListener('mousedown', (event) => {
+        event.preventDefault();
+        onSelect(suggestion);
+        closePanel();
+      });
+      panel.appendChild(button);
+    });
+
+    panel.hidden = false;
+    input.setAttribute('aria-expanded', 'true');
+  }
+
+  async function runSearch() {
+    const queryText = input.value.trim();
+
+    if (queryText.length < 2) {
+      closePanel();
+      return;
+    }
+
+    controller?.abort();
+    controller = new AbortController();
+
+    try {
+      const suggestions = await fetchSuggestions(queryText, controller.signal);
+      if (controller.signal.aborted) return;
+
+      const uniqueSuggestions = suggestions.filter((item, index, array) => {
+        const key = normalizeSuggestionKey(item.primary, item.secondary || '');
+        return array.findIndex((candidate) => normalizeSuggestionKey(candidate.primary, candidate.secondary || '') === key) === index;
+      });
+
+      renderPanel(uniqueSuggestions.slice(0, 6));
+    } catch (error) {
+      if (error?.name !== 'AbortError') {
+        console.warn('Autocomplete error:', error);
+      }
+      closePanel();
+    }
+  }
+
+  input.addEventListener('input', () => {
+    clearTimeout(debounceTimer);
+    debounceTimer = window.setTimeout(runSearch, 220);
+  });
+
+  input.addEventListener('focus', () => {
+    if (input.value.trim().length >= 2) {
+      runSearch();
+    }
+  });
+
+  input.addEventListener('blur', () => {
+    window.setTimeout(closePanel, 120);
+  });
+
+  return {
+    closePanel,
+    refresh: runSearch
+  };
+}
+
+async function fetchArtistSuggestions(queryText, signal) {
+  const response = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(queryText)}&entity=musicArtist&media=music&limit=6`, {
+    signal
+  });
+
+  if (!response.ok) return [];
+
+  const data = await response.json();
+  return (data.results || [])
+    .filter((item) => item.artistName)
+    .map((item) => ({
+      primary: item.artistName,
+      secondary: item.primaryGenreName || 'Artista musicale',
+      value: item.artistName
+    }));
+}
+
+async function fetchLocationSuggestions(queryText, mode, signal) {
+  const params = new URLSearchParams({
+    q: queryText,
+    format: 'jsonv2',
+    addressdetails: '1',
+    limit: '6',
+    'accept-language': 'it'
+  });
+
+  const response = await fetch(`https://nominatim.openstreetmap.org/search?${params.toString()}`, { signal });
+
+  if (!response.ok) return [];
+
+  const data = await response.json();
+  return data
+    .map((item) => {
+      const address = item.address || {};
+      const city = getCityFromAddress(address);
+      const country = address.country || '';
+      const venue = getPlaceTitle(item, queryText);
+      const primary = mode === 'city' ? city : venue;
+      const secondary = mode === 'city' ? country : [city, country].filter(Boolean).join(' · ');
+
+      return {
+        primary,
+        secondary,
+        venue,
+        city,
+        country
+      };
+    })
+    .filter((item) => item.primary);
+}
+
+function applyArtistSuggestion(suggestion) {
+  artistInput.value = suggestion.value;
+}
+
+function applyCitySuggestion(suggestion) {
+  cityInput.value = suggestion.city || suggestion.primary;
+  if (suggestion.country) {
+    countryInput.value = suggestion.country;
+  }
+}
+
+function applyVenueSuggestion(suggestion) {
+  venueInput.value = suggestion.venue || suggestion.primary;
+  if (suggestion.city) {
+    cityInput.value = suggestion.city;
+  }
+  if (suggestion.country) {
+    countryInput.value = suggestion.country;
+  }
+}
+
 const loginButton = document.getElementById('google-signin');
 const pageLogin = document.getElementById('page-login');
 const pageHome = document.getElementById('page-home');
@@ -192,14 +392,43 @@ const openAddConcertButton = document.getElementById('open-add-concert');
 const addConcertModal = document.getElementById('add-concert-modal');
 const closeAddConcertButton = document.getElementById('close-add-concert');
 const addConcertForm = document.getElementById('concert-form');
+const artistInput = document.getElementById('artist-name-input');
+const venueInput = document.getElementById('venue-input');
+const cityInput = document.getElementById('city-input');
+const countryInput = document.getElementById('country-input');
 const festivalToggle = document.getElementById('festival-toggle');
+const clubToggle = document.getElementById('club-toggle');
 const festivalField = document.getElementById('festival-name-field');
+const artistPanel = document.querySelector('[data-panel="artist"]');
+const venuePanel = document.querySelector('[data-panel="venue"]');
+const cityPanel = document.querySelector('[data-panel="city"]');
 const recentConcertsContainer = document.getElementById('recent-concerts');
 const timelineList = document.getElementById('timeline-list');
 const topArtistsContainer = document.getElementById('top-artists');
 
 let currentUser = null;
 let loadedConcerts = [];
+
+const artistAutocomplete = setupAutocomplete({
+  input: artistInput,
+  panel: artistPanel,
+  fetchSuggestions: fetchArtistSuggestions,
+  onSelect: applyArtistSuggestion
+});
+
+const cityAutocomplete = setupAutocomplete({
+  input: cityInput,
+  panel: cityPanel,
+  fetchSuggestions: (queryText, signal) => fetchLocationSuggestions(queryText, 'city', signal),
+  onSelect: applyCitySuggestion
+});
+
+const venueAutocomplete = setupAutocomplete({
+  input: venueInput,
+  panel: venuePanel,
+  fetchSuggestions: (queryText, signal) => fetchLocationSuggestions(queryText, 'venue', signal),
+  onSelect: applyVenueSuggestion
+});
 
 function renderLoggedOutState() {
   currentUser = null;
@@ -278,6 +507,7 @@ addConcertForm.addEventListener('submit', async (event) => {
     city: formData.get('city').trim(),
     country: formData.get('country').trim(),
     festival: formData.get('festival') === 'on',
+    discoteca: formData.get('discoteca') === 'on',
     festivalName: formData.get('festivalName').trim() || null,
     rating: Number(formData.get('rating')),
     notes: formData.get('notes').trim() || null,
@@ -292,6 +522,9 @@ addConcertForm.addEventListener('submit', async (event) => {
   await loadConcerts();
   showModal(false);
   addConcertForm.reset();
+  festivalField.classList.add('hidden');
+  festivalToggle.checked = false;
+  clubToggle.checked = false;
 });
 
 async function loadConcerts() {
@@ -368,6 +601,13 @@ function updateStats() {
 function showModal(show) {
   addConcertModal.classList.toggle('active', show);
   addConcertModal.setAttribute('aria-hidden', show ? 'false' : 'true');
+  document.body.classList.toggle('modal-open', show);
+
+  if (!show) {
+    artistAutocomplete.closePanel();
+    cityAutocomplete.closePanel();
+    venueAutocomplete.closePanel();
+  }
 }
 
 if ('serviceWorker' in navigator) {

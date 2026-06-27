@@ -273,7 +273,9 @@ function isMobileDevice() {
 
 function showMobileInstallBanner() {
   if (!mobileInstallBanner) return;
-  if (!isMobileDevice() || isStandaloneMode()) return;
+  if (window.matchMedia('(display-mode: standalone)').matches) {
+    document.getElementById('mobile-install-banner').style.display = 'none';
+  }
   try {
     if (window.localStorage.getItem(MOBILE_BANNER_KEY) === '1') return;
   } catch (error) {

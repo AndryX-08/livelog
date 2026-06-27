@@ -120,6 +120,53 @@ button {
   display: block;
 }
 
+.home-page-shell {
+  width: min(100%, 1120px);
+  margin-inline: auto;
+  display: grid;
+  gap: 18px;
+}
+
+.home-brand {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 0 8px;
+}
+
+.home-brand__icon {
+  width: 72px;
+  height: 72px;
+  border-radius: 22px;
+  object-fit: cover;
+  box-shadow: 0 18px 40px rgba(109, 91, 255, 0.22);
+}
+
+.home-brand__copy {
+  display: grid;
+  gap: 6px;
+}
+
+.home-brand__copy .eyebrow {
+  margin: 0;
+}
+
+.home-brand__title {
+  margin: 0;
+  font-family: 'Sora', 'Inter', sans-serif;
+  font-size: clamp(2rem, 4.2vw, 2.95rem);
+  line-height: 0.95;
+  letter-spacing: -0.06em;
+  font-weight: 800;
+}
+
+.home-brand__title span {
+  color: transparent;
+  background: linear-gradient(90deg, #a1a1ff 0%, #7c5cff 48%, #5d3fff 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
 .home-shell {
   display: grid;
   gap: 24px;
@@ -488,6 +535,25 @@ button {
     padding: 96px 14px 20px;
   }
 
+  .home-page-shell {
+    gap: 14px;
+  }
+
+  .home-brand {
+    padding: 0 2px;
+    gap: 12px;
+  }
+
+  .home-brand__icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 18px;
+  }
+
+  .home-brand__title {
+    font-size: 1.9rem;
+  }
+
   .home-header {
     width: 100%;
     gap: 14px;
@@ -711,6 +777,7 @@ button {
   margin: 0;
   font-size: clamp(2rem, 5vw, 2.8rem);
   letter-spacing: -0.04em;
+  font-family: 'Sora', 'Inter', sans-serif;
 }
 
 .brand-block p {

@@ -1,10 +1,15 @@
-const CACHE_NAME = 'livelog-pwa-v3';
+const CACHE_NAME = 'livelog-pwa-v4';
 const APP_SHELL = [
   './',
   './index.html',
   './style.css',
   './script.js',
-  './manifest.json'
+  './manifest.json',
+  './assets/icons/icon-192.png',
+  './assets/icons/icon-512.png',
+  './assets/icons/apple-touch-icon.png',
+  './assets/icons/favicon-32.png',
+  './assets/icons/favicon-16.png'
 ];
 
 self.addEventListener('install', (event) => {

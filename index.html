@@ -188,9 +188,9 @@
             <label for="festival-name-input">Nome Festival</label>
             <input id="festival-name-input" type="text" name="festivalName" autocomplete="off" />
           </div>
-          <div class="field-group">
-            <label for="rating-input">Voto da 1 a 5</label>
-            <input id="rating-input" type="number" name="rating" min="1" max="5" value="5" required />
+          <div class="user-select">
+            <input ame="partecipants" id="userSearch" placeholder="Cerca utenti..." />
+            <div name="partecipants" id="userList"></div>
           </div>
           <div class="field-group span-2">
             <label for="notes-input">Note</label>
@@ -199,7 +199,7 @@
           <div class="form-actions span-2">
             <button class="btn btn-primary" type="submit" id="save-concert-button">Salva Concerto</button>
             <button class="btn btn-ghost" id="close-add-concert">Chiudi</button>
-            <button class="btn btn-ghost hidden" type="button" id="delete-concert-button">Elimina concerto</button>
+            <button class="btn btn-ghost hidden btn-danger" type="button" id="delete-concert-button">Elimina concerto</button>
           </div>
         </form>
       </div>

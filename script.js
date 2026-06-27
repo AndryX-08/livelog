@@ -263,6 +263,59 @@ function getConcertSearchText(concert) {
     .toLowerCase();
 }
 
+let users = [];
+let selectedUsers = [];
+
+async function loadUsers() {
+  const snap = await getDocs(usersRef);
+
+  users = snap.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data()
+  }));
+
+  renderUsers(users);
+}
+loadUsers();
+
+function renderUsers(list) {
+  const container = document.getElementById("userList");
+  container.innerHTML = "";
+
+  list.forEach(user => {
+    const div = document.createElement("div");
+
+    div.innerHTML = `
+      <label>
+        <input type="checkbox" value="${user.id}">
+        ${user.name}
+      </label>
+    `;
+
+    const checkbox = div.querySelector("input");
+
+    checkbox.addEventListener("change", (e) => {
+      if (e.target.checked) {
+        selectedUsers.push(user.id);
+      } else {
+        selectedUsers = selectedUsers.filter(id => id !== user.id);
+      }
+    });
+
+    container.appendChild(div);
+  });
+}
+
+document.getElementById("userSearch").addEventListener("input", (e) => {
+  const value = e.target.value.toLowerCase();
+
+  const filtered = users.filter(u =>
+    u.name.toLowerCase().includes(value)
+  );
+
+  renderUsers(filtered);
+});
+
 function isStandaloneMode() {
   return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
 }
@@ -655,7 +708,7 @@ async function saveConcertFromForm(event) {
     festival: formData.get('festival') === 'on',
     discoteca: formData.get('discoteca') === 'on',
     festivalName: formData.get('festivalName').trim() || null,
-    rating: Number(formData.get('rating')),
+    partecipants: selectedUsers || [],
     notes: formData.get('notes').trim() || null,
     userId: currentUser.uid,
     updatedAt: new Date().toISOString(),

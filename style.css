@@ -112,10 +112,12 @@ button {
   transform: translateY(0);
 }
 
+.page-login,
 .page-home {
   display: none;
 }
 
+.page-login.active,
 .page-home.active {
   display: block;
 }
@@ -442,12 +444,24 @@ button {
   display: flex;
   gap: 12px;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   flex-wrap: wrap;
 }
 
 .form-actions .btn {
   width: auto;
+}
+
+.btn-danger {
+  background: rgba(239, 68, 68, 0.18);
+  border-color: rgba(239, 68, 68, 0.35);
+  color: #fecaca;
+}
+
+.btn-danger:hover {
+  background: rgba(239, 68, 68, 0.28);
+  border-color: rgba(239, 68, 68, 0.5);
+  color: #fff;
 }
 
 .pill-group {

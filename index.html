@@ -24,7 +24,7 @@
             <p>Registra i tuoi concerti, segui gli artisti e scopri la tua timeline live.</p>
           </div>
         </div>
-        <button class="btn btn-primary" id="google-signin">
+        <button class="btn auth-btn google btn-primary" id="google-login-button" type="button">
           Continua con Google
         </button>
         <p class="login-hint">Accedi per iniziare a salvare tutti i tuoi live!</p>
@@ -47,6 +47,8 @@
       </button>
     </div>
   </div>
+
+  <button class="btn-logout btn-danger" id="logout-button" type="button">Logout</button>
 
     <main class="page page-home" id="page-home" aria-hidden="true">
       <div class="home-page-shell">
@@ -188,9 +190,10 @@
             <label for="festival-name-input">Nome Festival</label>
             <input id="festival-name-input" type="text" name="festivalName" autocomplete="off" />
           </div>
-          <div class="user-select">
-            <input ame="partecipants" id="userSearch" placeholder="Cerca utenti..." />
-            <div name="partecipants" id="userList"></div>
+          <div class="field-group user-select">
+            <label for="partecipants">Partecipanti</label>
+            <input class="partecipants" id="userSearch" type="search" placeholder="Cerca utenti..." oninput="renderUserList()"/>
+            <div id="userList"></div>
           </div>
           <div class="field-group span-2">
             <label for="notes-input">Note</label>
@@ -199,9 +202,44 @@
           <div class="form-actions span-2">
             <button class="btn btn-primary" type="submit" id="save-concert-button">Salva Concerto</button>
             <button class="btn btn-ghost" id="close-add-concert">Chiudi</button>
-            <button class="btn btn-ghost hidden btn-danger" type="button" id="delete-concert-button">Elimina concerto</button>
+            <button class="btn hidden btn-danger" type="button" id="delete-concert-button">Elimina concerto</button>
           </div>
         </form>
+      </div>
+    </div>
+    <div class="modal-shell" id="artist-profile-modal" aria-hidden="true">
+      <div class="modal-backdrop"></div>
+      <div class="modal-content glass-card">
+        <div class="modal-header">
+          <div>
+            <h3 class="eyebrow">Profilo Artista</h3>
+          </div>
+        </div>
+        <div class="artist-profile-header">
+          <img class="artist-profile-photo is-loading" id="artist-profile-photo" alt="" />
+          <div>
+            <h4 class="artist-profile-name" id="artist-profile-name"></h4>
+            <p class="artist-profile-genre" id="artist-profile-genre"></p>
+          </div>
+        </div>
+        <div class="artist-profile-stats">
+          <div>
+            <strong id="artist-profile-count">0</strong>
+            <span>Concerti visti</span>
+          </div>
+        </div>
+        <p class="artist-profile-error hidden" id="artist-profile-error">
+          Impossibile recuperare i dati dell'artista al momento.
+        </p>
+        <a class="artist-profile-link hidden" id="artist-profile-itunes-link" target="_blank" rel="noopener noreferrer">
+          Scopri di più ↗
+        </a>
+        <br></br>
+        <p class="artist-profile-section-title">I tuoi concerti</p>
+        <div class="artist-profile-concerts" id="artist-profile-concerts"></div>
+        <div class="form-actions span-2">
+          <button class="btn btn-ghost" id="close-artist-profile" type="button">Chiudi</button>
+        </div>
       </div>
     </div>
   </div>

@@ -7,7 +7,8 @@ import {
   setPersistence,
   browserLocalPersistence,
   signInWithPopup,
-  signInWithRedirect
+  signInWithRedirect,
+  signOut
 } from 'https://www.gstatic.com/firebasejs/10.10.0/firebase-auth.js';
 import { getFirestore, collection, doc, setDoc, serverTimestamp, getDoc, getDocs, query, where, addDoc, updateDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.10.0/firebase-firestore.js';
 
@@ -20,9 +21,12 @@ const firebaseConfig = {
   measurementId: "G-BP5QD2VYN7"
 };
 
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
+const firebaseApp = initializeApp(firebaseConfig);
+const auth = getAuth(firebaseApp);
+const db = getFirestore(firebaseApp);
+
+// Chiave demo pubblica di TheAudioDB (https://www.theaudiodb.com/free_music_api), limite 30 richieste/min.
+const AUDIODB_API_KEY = '123';
 
 async function signInWithGoogle() {
   const provider = new GoogleAuthProvider();
@@ -129,6 +133,24 @@ async function getOrCreateVenue(venueName, city, country, userId) {
   return docRef.id;
 }
 
+function createArtistLinksHtml(artists, fallback) {
+  if (artists.length === 0) {
+    return escapeHtml(fallback || '');
+  }
+  return artists
+    .map((name) => `<span class="artist-link" data-artist-name="${escapeHtml(name)}">${escapeHtml(name)}</span>`)
+    .join(', ');
+}
+
+function attachArtistLinkListeners(card) {
+  card.querySelectorAll('.artist-link').forEach((el) => {
+    el.addEventListener('click', (event) => {
+      event.stopPropagation();
+      openArtistProfile(el.dataset.artistName);
+    });
+  });
+}
+
 function createRecentCard(concert) {
   const card = document.createElement('article');
   card.className = 'recent-card glass-card';
@@ -137,8 +159,8 @@ function createRecentCard(concert) {
   card.innerHTML = `
     <div class="recent-card-header">
       <div>
-        <span>${artists.join(', ') || concert.artistName}</span>
-        <strong>${concert.venue} · ${concert.city}</strong>
+        <span>${createArtistLinksHtml(artists, concert.artistName)}</span>
+        <strong>${escapeHtml(concert.venue)} · ${escapeHtml(concert.city)}</strong>
       </div>
       <strong>${formatDate(concert.date)}</strong>
     </div>
@@ -148,6 +170,7 @@ function createRecentCard(concert) {
       <button class="btn btn-ghost" type="button" data-action="delete">Elimina</button>
     </div>
   `;
+  attachArtistLinkListeners(card);
   card.querySelector('[data-action="edit"]').addEventListener('click', () => openConcertForEdit(concert));
   card.querySelector('[data-action="delete"]').addEventListener('click', () => removeConcert(concert));
   return card;
@@ -162,10 +185,10 @@ function createTimelineCard(concert) {
     <div class="timeline-line"></div>
     <div class="timeline-content">
       <div>
-        <h4>${artists.join(', ') || concert.artistName}</h4>
-        <p>${formatDate(concert.date)} · ${concert.city}</p>
+        <h4>${createArtistLinksHtml(artists, concert.artistName)}</h4>
+        <p>${formatDate(concert.date)} · ${escapeHtml(concert.city)}</p>
       </div>
-      <span>${concert.venue}</span>
+      <span>${escapeHtml(concert.venue)}</span>
     </div>
     <p class="timeline-meta">${labels.join(' · ')}</p>
     <div class="card-actions">
@@ -173,6 +196,7 @@ function createTimelineCard(concert) {
       <button class="btn btn-ghost" type="button" data-action="delete">Elimina</button>
     </div>
   `;
+  attachArtistLinkListeners(card);
   card.querySelector('[data-action="edit"]').addEventListener('click', () => openConcertForEdit(concert));
   card.querySelector('[data-action="delete"]').addEventListener('click', () => removeConcert(concert));
   return card;
@@ -182,9 +206,10 @@ function createTopArtistCard(artistName, count) {
   const card = document.createElement('article');
   card.className = 'artist-card glass-card';
   card.innerHTML = `
-    <strong>${artistName}</strong>
+    <strong class="artist-link" data-artist-name="${escapeHtml(artistName)}">${escapeHtml(artistName)}</strong>
     <span>${count} live</span>
   `;
+  attachArtistLinkListeners(card);
   return card;
 }
 
@@ -267,6 +292,7 @@ let users = [];
 let selectedUsers = [];
 
 async function loadUsers() {
+  // const userRef=db.collection('users').doc(user.uid);
   const snap = await getDocs(usersRef);
 
   users = snap.docs.map(doc => ({
@@ -454,6 +480,97 @@ async function fetchArtistSuggestions(queryText, signal) {
     }));
 }
 
+function upscaleArtworkUrl(artworkUrl, size = 600) {
+  if (!artworkUrl) return null;
+  return artworkUrl.replace(/\d+x\d+bb\.(jpg|png)$/i, `${size}x${size}bb.$1`);
+}
+
+async function fetchArtistFromAudioDb(artistName) {
+  const response = await fetch(
+    `https://www.theaudiodb.com/api/v1/json/${AUDIODB_API_KEY}/search.php?s=${encodeURIComponent(artistName)}`
+  );
+  if (!response.ok) return null;
+
+  const data = await response.json();
+  const result = (data.artists || [])[0];
+  if (!result) return null;
+
+  return {
+    name: result.strArtist || artistName,
+    genre: result.strGenre || result.strStyle || null,
+    photoUrl: result.strArtistThumb || result.strArtistFanart || null,
+    artistPageUrl: result.strWebsite ? `https://${result.strWebsite.replace(/^https?:\/\//, '')}` : null
+  };
+}
+
+async function fetchArtistProfile(artistName) {
+  const cacheKey = artistName.trim().toLowerCase();
+  if (artistProfileCache.has(cacheKey)) {
+    return artistProfileCache.get(cacheKey);
+  }
+
+  const profile = {
+    name: artistName,
+    genre: null,
+    artworkUrl: null,
+    itunesUrl: null
+  };
+
+  // 1. Provo TheAudioDB: foto profilo reale, gratuita, senza bisogno di backend.
+  try {
+    const audioDbResult = await fetchArtistFromAudioDb(artistName);
+    if (audioDbResult) {
+      profile.name = audioDbResult.name || artistName;
+      profile.genre = audioDbResult.genre || null;
+      profile.artworkUrl = audioDbResult.photoUrl || null;
+      profile.itunesUrl = audioDbResult.artistPageUrl || null;
+
+      if (profile.artworkUrl) {
+        artistProfileCache.set(cacheKey, profile);
+        return profile;
+      }
+    }
+  } catch (error) {
+    console.warn('TheAudioDB non disponibile, uso il fallback iTunes:', error);
+  }
+
+  // 2. Fallback: nessuna vera foto disponibile, uso la cover dell'ultimo brano trovato su iTunes.
+  try {
+    const artistSearchResponse = await fetch(
+      `https://itunes.apple.com/search?term=${encodeURIComponent(artistName)}&entity=musicArtist&media=music&limit=1`
+    );
+    if (artistSearchResponse.ok) {
+      const artistData = await artistSearchResponse.json();
+      const artistResult = (artistData.results || [])[0];
+      if (artistResult) {
+        profile.name = profile.name || artistResult.artistName || artistName;
+        profile.genre = profile.genre || artistResult.primaryGenreName || null;
+        profile.itunesUrl = profile.itunesUrl || artistResult.artistLinkUrl || null;
+
+        if (!profile.artworkUrl) {
+          const songSearchResponse = await fetch(
+            `https://itunes.apple.com/lookup?id=${artistResult.artistId}&entity=song&limit=5`
+          );
+          if (songSearchResponse.ok) {
+            const songData = await songSearchResponse.json();
+            const songResult = (songData.results || []).find((item) => item.artworkUrl100);
+            if (songResult) {
+              profile.artworkUrl = upscaleArtworkUrl(songResult.artworkUrl100, 600);
+              profile.isFallbackArtwork = true;
+            }
+          }
+        }
+      }
+    }
+  } catch (error) {
+    console.warn('Errore recuperando il profilo artista da iTunes:', error);
+    profile.failed = true;
+  }
+
+  artistProfileCache.set(cacheKey, profile);
+  return profile;
+}
+
 async function fetchLocationSuggestions(queryText, mode, signal) {
   const params = new URLSearchParams({
     q: queryText,
@@ -521,9 +638,10 @@ function createChip(label, onRemove) {
   return chip;
 }
 
-const loginButton = document.getElementById('google-signin');
 const pageLogin = document.getElementById('page-login');
 const pageHome = document.getElementById('page-home');
+const googleLoginButton = document.getElementById('google-login-button');
+const logoutButton = document.getElementById('logout-button');
 const profileAvatar = document.getElementById('profile-avatar');
 const homeUsername = document.getElementById('home-username');
 const statConcerts = document.getElementById('stat-concerts');
@@ -556,6 +674,16 @@ const recentConcertsContainer = document.getElementById('recent-concerts');
 const timelineList = document.getElementById('timeline-list');
 const topArtistsContainer = document.getElementById('top-artists');
 
+const artistProfileModal = document.getElementById('artist-profile-modal');
+const closeArtistProfileButton = document.getElementById('close-artist-profile');
+const artistProfilePhoto = document.getElementById('artist-profile-photo');
+const artistProfileName = document.getElementById('artist-profile-name');
+const artistProfileGenre = document.getElementById('artist-profile-genre');
+const artistProfileCount = document.getElementById('artist-profile-count');
+const artistProfileError = document.getElementById('artist-profile-error');
+const artistProfileItunesLink = document.getElementById('artist-profile-itunes-link');
+const artistProfileConcertsList = document.getElementById('artist-profile-concerts');
+
 let currentUser = null;
 let loadedConcerts = [];
 let hasReloadedAfterUpdate = false;
@@ -563,6 +691,8 @@ const MOBILE_BANNER_KEY = 'livelog-mobile-banner-dismissed';
 let currentEditConcertId = null;
 let currentArtistNames = [];
 let searchQuery = '';
+const artistProfileCache = new Map();
+let artistProfileRequestId = 0;
 
 const artistAutocomplete = setupAutocomplete({
   input: artistInput,
@@ -743,6 +873,41 @@ async function saveConcertFromForm(event) {
   }
 }
 
+function renderUserList(){
+  const el=document.getElementById('userList');
+  if(!el)return;
+  const query=(document.getElementById('partecipants')?.value||'').trim().toLowerCase();
+  const users=registeredUsers
+    .filter(u=>u.uid!==currentUser?.uid)
+    .filter(u=>{
+      const label=[u.nickname,u.name,u.firstName,u.lastName].filter(Boolean).join(' ').toLowerCase();
+      return !query||label.includes(query);
+    })
+    .sort((a,b)=>(a.nickname||a.name||'').localeCompare(b.nickname||b.name||''));
+  if(!currentUser){
+    el.innerHTML='<div class="empty">Accedi per vedere gli amici</div>';
+    return;
+  }
+  if(!users.length){
+    el.innerHTML='<div class="empty">Nessun utente trovato</div>';
+    return;
+  }
+  el.innerHTML=users.map(u=>{
+    const presence=userPresenceMap[u.uid]||{};
+    const online=!!presence.online;
+    const name=getProfileDisplayName(u,{uid:u.uid,displayName:u.name});
+    const alreadyAdded=players.some(p=>p.uid===u.uid);
+    return `<div class="friend-row">
+      ${renderProfileAvatar(u,name,'friend-avatar')}
+      <div>
+        <div class="friend-name">${escapeHtml(name)}</div>
+        <div class="friend-status"><span class="status-dot${online?' on':''}"></span>${online?'Online':'Offline'}</div>
+      </div>
+      <button class="btn-ghost" style="padding:.55rem .8rem" ${alreadyAdded?'disabled':''} onclick="addFriendToGameSetup('${escapeHtml(u.uid)}')">${alreadyAdded?'Aggiunto':'Aggiungi'}</button>
+    </div>`;
+  }).join('');
+}
+
 function renderLoggedOutState() {
   currentUser = null;
   loadedConcerts = [];
@@ -775,25 +940,23 @@ if (mobileInstallBannerClose) {
   mobileInstallBannerClose.addEventListener('click', hideMobileInstallBanner);
 }
 
-loginButton.addEventListener('click', async () => {
-  try {
-    loginButton.disabled = true;
-    loginButton.textContent = 'Caricamento...';
-    await signInWithGoogle();
-  } catch (error) {
-    console.error('Errore login:', error);
-
-    if (error?.code === 'auth/unauthorized-domain') {
-      alert('Questo dominio non è autorizzato in Firebase Auth. Aggiungi l\'URL della pagina tra i domini autorizzati.');
-      return;
+if (googleLoginButton) {
+  googleLoginButton.addEventListener('click', async () => {
+    googleLoginButton.disabled = true;
+    try {
+      await signInWithGoogle();
+    } catch (error) {
+      console.error('Errore durante il login con Google:', error);
+      alert('Il login con Google non è riuscito. Riprova.');
+    } finally {
+      googleLoginButton.disabled = false;
     }
+  });
+}
 
-    alert('Impossibile completare il login. Riprova.');
-  } finally {
-    loginButton.disabled = false;
-    loginButton.textContent = 'Continua con Google';
-  }
-});
+if (logoutButton) {
+  logoutButton.addEventListener('click', logout);
+}
 
 onAuthStateChange(async (user) => {
   if (user) {
@@ -957,6 +1120,92 @@ function showModal(show) {
   }
 }
 
+function showArtistProfileModal(show) {
+  artistProfileModal.classList.toggle('active', show);
+  artistProfileModal.setAttribute('aria-hidden', show ? 'false' : 'true');
+  document.body.classList.toggle('modal-open', show);
+}
+
+function getConcertsForArtist(artistName) {
+  const normalizedName = artistName.trim().toLowerCase();
+  return loadedConcerts
+    .filter((concert) => getConcertArtists(concert).some((name) => name.trim().toLowerCase() === normalizedName))
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+}
+
+function renderArtistProfileConcerts(concerts) {
+  artistProfileConcertsList.innerHTML = '';
+
+  if (concerts.length === 0) {
+    artistProfileConcertsList.innerHTML = '<div class="placeholder-card glass-card"><span>Nessun concerto salvato per questo artista.</span></div>';
+    return;
+  }
+
+  concerts.forEach((concert) => {
+    const item = document.createElement('div');
+    item.className = 'artist-profile-concert-item';
+    item.innerHTML = `
+      <span>${escapeHtml(concert.venue || '')} · ${escapeHtml(concert.city || '')}</span>
+      <strong>${formatDate(concert.date)}</strong>
+    `;
+    artistProfileConcertsList.appendChild(item);
+  });
+}
+
+async function openArtistProfile(artistName) {
+  if (!artistName) return;
+
+  const requestId = ++artistProfileRequestId;
+  const artistConcerts = getConcertsForArtist(artistName);
+
+  artistProfileName.textContent = artistName;
+  artistProfileGenre.textContent = '';
+  artistProfileCount.textContent = String(artistConcerts.length);
+  artistProfilePhoto.src = '';
+  artistProfilePhoto.classList.add('is-loading');
+  artistProfileError.classList.add('hidden');
+  artistProfileItunesLink.classList.add('hidden');
+  renderArtistProfileConcerts(artistConcerts);
+
+  showArtistProfileModal(true);
+
+  const profile = await fetchArtistProfile(artistName);
+
+  if (requestId !== artistProfileRequestId) return;
+
+  artistProfilePhoto.classList.remove('is-loading');
+  artistProfileName.textContent = profile.name || artistName;
+  artistProfileGenre.textContent = profile.genre || '';
+
+  if (profile.artworkUrl) {
+    artistProfilePhoto.src = profile.artworkUrl;
+    artistProfilePhoto.alt = profile.name || artistName;
+  } else {
+    artistProfilePhoto.removeAttribute('src');
+    artistProfilePhoto.alt = '';
+  }
+
+  if (profile.itunesUrl) {
+    artistProfileItunesLink.href = profile.itunesUrl;
+    artistProfileItunesLink.classList.remove('hidden');
+  }
+
+  if (profile.failed || (!profile.artworkUrl && !profile.genre)) {
+    artistProfileError.textContent = "Impossibile recuperare i dati dell'artista al momento.";
+    artistProfileError.classList.remove('hidden');
+  } else if (profile.isFallbackArtwork) {
+    artistProfileError.textContent = 'Foto profilo non disponibile: mostrata la copertina di un brano.';
+    artistProfileError.classList.remove('hidden');
+  }
+}
+
+closeArtistProfileButton.addEventListener('click', () => showArtistProfileModal(false));
+artistProfileModal.addEventListener('click', (event) => {
+  if (event.target === artistProfileModal) {
+    showArtistProfileModal(false);
+  }
+});
+
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('service-worker.js', { updateViaCache: 'none' }).then((registration) => {
@@ -997,3 +1246,12 @@ window.addEventListener('resize', () => {
 initAuth().catch((error) => {
   console.error('Errore inizializzando l\'auth:', error);
 });
+
+async function logout() {
+  try {
+    await signOut(auth);
+  } catch (error) {
+    console.error('Errore durante il logout:', error);
+    alert('Non è stato possibile effettuare il logout. Riprova.');
+  }
+}

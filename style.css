@@ -467,12 +467,28 @@ button {
   background: rgba(239, 68, 68, 0.18);
   border-color: rgba(239, 68, 68, 0.35);
   color: #fecaca;
+  transition: transform 0.24s ease, border-color 0.24s ease, background 0.24s ease, color 0.24s ease;
+  border: 1px solid rgba(239, 68, 68, 0.35);
 }
 
 .btn-danger:hover {
   background: rgba(239, 68, 68, 0.28);
   border-color: rgba(239, 68, 68, 0.5);
   color: #fff;
+  border: 1px solid red;
+  transition: transform 0.24s ease;
+}
+
+.btn-logout{
+  background: rgba(239, 68, 68, 0.18);
+  border-color: rgba(239, 68, 68, 0.35);
+  color: #fecaca;
+  padding: 18px 22px;
+  border-radius: 28px;
+  font-weight: 700;
+  cursor: pointer;
+  display: block;
+  margin-left: auto;
 }
 
 .pill-group {
@@ -525,18 +541,18 @@ button {
   transform: translateY(-1px);
 }
 
-@media (max-width: 900px) {
+@media (min-width: 900px) {
   .home-header {
     flex-direction: column;
     align-items: flex-start;
   }
 
   .stats-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(1, minmax(0, 1fr));
   }
 
   .concert-form {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(1, minmax(0, 1fr));
   }
 
   .span-2 {
@@ -871,3 +887,97 @@ button {
     padding: 24px;
   }
 }
+
+.artist-link {
+      cursor: pointer;
+      text-decoration: underline;
+      text-decoration-color: transparent;
+      transition: text-decoration-color 0.15s ease, opacity 0.15s ease;
+    }
+    .artist-link:hover,
+    .artist-link:focus-visible {
+      text-decoration-color: currentColor;
+      opacity: 0.85;
+    }
+    .artist-profile-header {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1.25rem;
+    }
+    .artist-profile-photo {
+      width: 96px;
+      height: 96px;
+      border-radius: 50%;
+      object-fit: cover;
+      background: rgba(255, 255, 255, 0.08);
+      flex-shrink: 0;
+    }
+    .artist-profile-photo.is-loading {
+      animation: artist-photo-pulse 1.2s ease-in-out infinite;
+    }
+    @keyframes artist-photo-pulse {
+      0%, 100% { opacity: 0.4; }
+      50% { opacity: 0.8; }
+    }
+    .artist-profile-name {
+      font-family: 'Sora', sans-serif;
+      font-size: 1.3rem;
+      font-weight: 700;
+      margin: 0 0 0.25rem;
+    }
+    .artist-profile-genre {
+      margin: 0;
+      opacity: 0.7;
+      font-size: 0.9rem;
+    }
+    .artist-profile-stats {
+      display: flex;
+      gap: 1.5rem;
+      margin-bottom: 1.25rem;
+    }
+    .artist-profile-stats div {
+      display: flex;
+      flex-direction: column;
+    }
+    .artist-profile-stats strong {
+      font-size: 1.25rem;
+      font-family: 'Sora', sans-serif;
+    }
+    .artist-profile-stats span {
+      font-size: 0.75rem;
+      opacity: 0.65;
+    }
+    .artist-profile-section-title {
+      font-size: 0.85rem;
+      opacity: 0.7;
+      margin: 0 0 0.6rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .artist-profile-concerts {
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+      max-height: 220px;
+      overflow-y: auto;
+    }
+    .artist-profile-concert-item {
+      display: flex;
+      justify-content: space-between;
+      gap: 0.75rem;
+      font-size: 0.88rem;
+      padding: 0.55rem 0.7rem;
+      border-radius: 0.6rem;
+      background: rgba(255, 255, 255, 0.05);
+    }
+    .artist-profile-error {
+      font-size: 0.85rem;
+      opacity: 0.7;
+      margin-top: 0.5rem;
+    }
+    .artist-profile-link {
+      display: inline-block;
+      margin-top: 1rem;
+      font-size: 0.85rem;
+    }
